@@ -183,13 +183,13 @@ class _GameScreenState extends State<GameScreen> {
   int mistakes=0, hints=0, seconds=0;
   final Map<String,Set<int>> pencil={};
   final List<Map<String,dynamic>> history=[];
-  static const _saveKey='sudoku_active_game_v2';
+  static const _saveKey='sudoku_active_game_v3';
   static const _statsKey='sudoku_stats_v2';
   static const _levels=['Başlangıç','Kolay','Orta','Zor','Uzman','Efsane'];
 
   @override void initState(){super.initState(); _loadOrCreate();}
   String get time=>'${(seconds~/60).toString().padLeft(2,'0')}:${(seconds%60).toString().padLeft(2,'0')}';
-  int get clueCount=>[45,38,32,28,25,22][_levels.indexOf(widget.level).clamp(0,5).toInt()];
+  int get clueCount=>[58,52,46,40,34,29][_levels.indexOf(widget.level).clamp(0,5).toInt()];
 
   Future<void> _loadOrCreate() async {
     final prefs=await SharedPreferences.getInstance();
@@ -216,17 +216,31 @@ class _GameScreenState extends State<GameScreen> {
     final seed=widget.daily?int.parse(_today().replaceAll('-','')):DateTime.now().microsecondsSinceEpoch;
     final full=_generateSolution(seed);
     solution=full.map((r)=>[...r]).toList();
-    givens=full.map((r)=>[...r]).toList();
-    final random=Random(seed);
-    final cells=List<int>.generate(81,(i)=>i)..shuffle(random);
     final targetClues=clueCount;
-    var clues=81;
-    for(final index in cells){
-      if(clues<=targetClues)break;
-      final r=index~/9,c=index%9,backup=givens[r][c];
-      givens[r][c]=0;
-      if(_countSolutions(givens,limit:2)==1){clues--;}else{givens[r][c]=backup;}
+    var bestGrid=full.map((r)=>[...r]).toList();
+    var bestClues=81;
+    // Farklı hücre sıralarıyla tekrar dene; tek bir açgözlü turda erken takılma.
+    for(var attempt=0;attempt<12;attempt++){
+      final candidate=full.map((r)=>[...r]).toList();
+      final cells=List<int>.generate(81,(i)=>i)..shuffle(Random(seed+attempt*7919));
+      var clues=81;
+      for(final index in cells){
+        if(clues<=targetClues)break;
+        final r=index~/9,c=index%9,backup=candidate[r][c];
+        candidate[r][c]=0;
+        if(_countSolutions(candidate,limit:2)==1){
+          clues--;
+        }else{
+          candidate[r][c]=backup;
+        }
+      }
+      if(clues<bestClues){
+        bestClues=clues;
+        bestGrid=candidate.map((r)=>[...r]).toList();
+      }
+      if(bestClues<=targetClues)break;
     }
+    givens=bestGrid;
     board=givens.map((r)=>[...r]).toList();
     seconds=0;mistakes=0;hints=0;row=null;col=null;pencil.clear();history.clear();
   }
