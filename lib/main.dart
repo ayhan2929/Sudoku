@@ -393,23 +393,67 @@ class _GameScreenState extends State<GameScreen> {
       Padding(padding:const EdgeInsets.symmetric(horizontal:28,vertical:4),child:Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
         _metric('SÜRE',time),_metric('HATALAR','$mistakes'),_metric('İPUCU','$hints'),
       ])),
-      Expanded(child:Center(child:AspectRatio(aspectRatio:1,child:Container(margin:const EdgeInsets.all(12),
-        decoration:BoxDecoration(border:Border.all(color:gold,width:1.3),borderRadius:BorderRadius.circular(5),color:const Color(0xCC10141D)),
-        child:Column(children:List.generate(9,(r)=>Expanded(child:Row(children:List.generate(9,(c){
-          final n=board[r][c],selected=row==r&&col==c;
-          final related=row==r||col==c||(row!=null&&col!=null&&row!~/3==r~/3&&col!~/3==c~/3);
-          final bad=n!=0&&n!=solution[r][c];
-          final notesText=(pencil['$r,$c']??{}).toList()..sort();
-          return Expanded(child:GestureDetector(onTap:()=>setState((){row=r;col=c;}),child:Container(
-            alignment:Alignment.center,
-            decoration:BoxDecoration(color:selected?const Color(0xFF594725):related?const Color(0x332D3A4C):Colors.transparent,
-              border:Border(right:BorderSide(color:c==2||c==5?gold:Colors.white12,width:c==2||c==5?1.5:.45),
-                bottom:BorderSide(color:r==2||r==5?gold:Colors.white12,width:r==2||r==5?1.5:.45))),
-            child:Text(n==0?notesText.join(''):'$n',style:TextStyle(fontSize:n==0?9:20,
-              color:bad?Colors.redAccent:(fixed(r,c)?white:brightGold),fontWeight:fixed(r,c)?FontWeight.bold:FontWeight.w500)),
-          )));
-        })))))))),
-      )),
+      Expanded(
+        child: Center(
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: Container(
+              margin: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                border: Border.all(color: gold, width: 1.3),
+                borderRadius: BorderRadius.circular(5),
+                color: const Color(0xCC10141D),
+              ),
+              child: Column(
+                children: List.generate(9, (r) => Expanded(
+                  child: Row(
+                    children: List.generate(9, (c) {
+                      final n = board[r][c];
+                      final selected = row == r && col == c;
+                      final related = row == r || col == c ||
+                          (row != null && col != null &&
+                           row! ~/ 3 == r ~/ 3 && col! ~/ 3 == c ~/ 3);
+                      final bad = n != 0 && n != solution[r][c];
+                      final notesText = (pencil['$r,$c'] ?? {}).toList()..sort();
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() { row = r; col = c; }),
+                          child: Container(
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? const Color(0xFF594725)
+                                  : related ? const Color(0x332D3A4C) : Colors.transparent,
+                              border: Border(
+                                right: BorderSide(
+                                  color: c == 2 || c == 5 ? gold : Colors.white12,
+                                  width: c == 2 || c == 5 ? 1.5 : .45,
+                                ),
+                                bottom: BorderSide(
+                                  color: r == 2 || r == 5 ? gold : Colors.white12,
+                                  width: r == 2 || r == 5 ? 1.5 : .45,
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              n == 0 ? notesText.join('') : '$n',
+                              style: TextStyle(
+                                fontSize: n == 0 ? 9 : 20,
+                                color: bad ? Colors.redAccent : (fixed(r, c) ? white : brightGold),
+                                fontWeight: fixed(r, c) ? FontWeight.bold : FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                )),
+              ),
+            ),
+          ),
+        ),
+      ),
       Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),child:Row(children:[
         _tool(Icons.edit_note,'Not',notes,()=>setState(()=>notes=!notes)),
         _tool(Icons.undo,'Geri al',false,undo),
