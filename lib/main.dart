@@ -183,6 +183,7 @@ class _GameScreenState extends State<GameScreen> {
   int mistakes=0, hints=0, seconds=0;
   final Map<String,Set<int>> pencil={};
   final List<Map<String,dynamic>> history=[];
+  final List<Map<String,dynamic>> redoHistory=[];
   static const _saveKey='sudoku_active_game_v3';
   static const _statsKey='sudoku_stats_v2';
   static const _levels=['Başlangıç','Kolay','Orta','Zor','Uzman','Efsane'];
@@ -297,6 +298,44 @@ class _GameScreenState extends State<GameScreen> {
     }));
   }
   bool fixed(int r,int c)=>givens[r][c]!=0;
+  Map<String,Set<int>> _copyPencil()=>pencil.map((k,v)=>MapEntry(k,Set<int>.from(v)));
+  List<int> candidates(int r,int c){
+    if(board[r][c]!=0)return [];
+    return List<int>.generate(9,(i)=>i+1).where((n)=>!conflict(r,c,n)).toList();
+  }
+  void _removePeerNote(int r,int c,int n){
+    for(int i=0;i<9;i++){
+      pencil['$r,$i']?.remove(n);
+      pencil['$i,$c']?.remove(n);
+    }
+    final br=r~/3*3,bc=c~/3*3;
+    for(int y=br;y<br+3;y++)for(int x=bc;x<bc+3;x++)pencil['$y,$x']?.remove(n);
+    pencil.removeWhere((k,v)=>v.isEmpty);
+  }
+  Future<void> fillSmartNotes() async {
+    setState((){
+      for(int r=0;r<9;r++)for(int c=0;c<9;c++){
+        if(board[r][c]==0)pencil['$r,$c']=candidates(r,c).toSet();
+      }
+    });
+    await _save();
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content:Text('Geçerli aday sayılar tüm boş hücrelere yerleştirildi.')));
+  }
+  String _hintExplanation(int r,int c,int n){
+    final rowCount=List.generate(9,(i)=>i).where((i)=>board[r][i]==0 && candidates(r,i).contains(n)).length;
+    final colCount=List.generate(9,(i)=>i).where((i)=>board[i][c]==0 && candidates(i,c).contains(n)).length;
+    final br=r~/3*3,bc=c~/3*3;
+    var boxCount=0;
+    for(int y=br;y<br+3;y++)for(int x=bc;x<bc+3;x++){
+      if(board[y][x]==0 && candidates(y,x).contains(n))boxCount++;
+    }
+    if(candidates(r,c).length==1)return 'Tek aday: Bu hücreye gelebilecek tek sayı $n.';
+    if(rowCount==1)return 'Satırda tek yer: $n sayısı bu satırda yalnızca bu hücreye gelebilir.';
+    if(colCount==1)return 'Sütunda tek yer: $n sayısı bu sütunda yalnızca bu hücreye gelebilir.';
+    if(boxCount==1)return '3×3 bölgede tek yer: $n sayısı bu bölgede yalnızca bu hücreye gelebilir.';
+    return 'Çözüm desteği: Mantıksal tek-adım ipucu bulunamadı; çözüm anahtarına göre doğru sayı $n.';
+  }
   bool conflict(int r,int c,int n){
     for(int i=0;i<9;i++){if(i!=c&&board[r][i]==n)return true;if(i!=r&&board[i][c]==n)return true;}
     for(int y=r~/3*3;y<r~/3*3+3;y++)for(int x=c~/3*3;x<c~/3*3+3;x++){
@@ -319,14 +358,16 @@ class _GameScreenState extends State<GameScreen> {
       final key='$r,$c';
       if(notes){
         final before=(pencil[key]??<int>{}).toList();
-        history.add({'r':r,'c':c,'old':board[r][c],'mistakes':mistakes,'pencil':before});
+        history.add({'r':r,'c':c,'old':board[r][c],'mistakes':mistakes,'pencil':before,'pencilAll':_copyPencil()});
+        redoHistory.clear();
         pencil.putIfAbsent(key,()=>{});
         if(pencil[key]!.contains(n)){pencil[key]!.remove(n);}else{pencil[key]!.add(n);}
         if(pencil[key]!.isEmpty)pencil.remove(key);
       } else {
-        history.add({'r':r,'c':c,'old':board[r][c],'mistakes':mistakes,'pencil':(pencil[key]??{}).toList()});
-        board[r][c]=n;pencil.remove(key);
-        if(n!=solution[r][c])mistakes++;
+        history.add({'r':r,'c':c,'old':board[r][c],'mistakes':mistakes,'pencil':(pencil[key]??{}).toList(),'pencilAll':_copyPencil()});
+        redoHistory.clear();
+        board[r][c]=n;pencil.remove(key);_removePeerNote(r,c,n);
+        if(n!=solution[r][c] && board[r][c]!=0)mistakes++;
       }
     });
     await _save();
@@ -336,8 +377,8 @@ class _GameScreenState extends State<GameScreen> {
     if(row==null||col==null||fixed(row!,col!))return;
     final r=row!,c=col!;
     setState((){
-      history.add({'r':r,'c':c,'old':board[r][c],'mistakes':mistakes,'pencil':(pencil['$r,$c']??{}).toList()});
-      board[r][c]=0;pencil.remove('$r,$c');
+      history.add({'r':r,'c':c,'old':board[r][c],'mistakes':mistakes,'pencil':(pencil['$r,$c']??{}).toList(),'pencilAll':_copyPencil()});
+      redoHistory.clear();board[r][c]=0;pencil.remove('$r,$c');
     });await _save();
   }
   Future<void> undo() async {
@@ -349,15 +390,20 @@ class _GameScreenState extends State<GameScreen> {
       mistakes=m['mistakes'] as int? ?? mistakes;
       final oldNotes=(m['pencil'] as List?)?.cast<int>() ?? [];
       if(oldNotes.isNotEmpty)pencil['$r,$c']=oldNotes.toSet();else{pencil.remove('$r,$c');}
+      if(m['pencilAll'] is Map){pencil..clear()..addAll((m['pencilAll'] as Map).map((k,v)=>MapEntry(k.toString(),(v as Set<int>))));}
     });await _save();
   }
   Future<void> hint() async {
     if(row==null||col==null||fixed(row!,col!))return;
     final r=row!,c=col!;
     setState((){
-      history.add({'r':r,'c':c,'old':board[r][c],'mistakes':mistakes,'pencil':(pencil['$r,$c']??{}).toList()});
-      board[r][c]=solution[r][c];pencil.remove('$r,$c');
+      history.add({'r':r,'c':c,'old':board[r][c],'mistakes':mistakes,'pencil':(pencil['$r,$c']??{}).toList(),'pencilAll':_copyPencil()});
+      redoHistory.clear();
+      final answer=solution[r][c];
+      final explanation=_hintExplanation(r,c,answer);
+      board[r][c]=answer;pencil.remove('$r,$c');_removePeerNote(r,c,answer);
       hints++;
+      WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(explanation),duration:const Duration(seconds:4)));});
     });
     await _save();if(complete)await _finish();
   }
@@ -486,8 +532,9 @@ class _GameScreenState extends State<GameScreen> {
       ),
       Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),child:Row(children:[
         _tool(Icons.edit_note,'Not',notes,()=>setState(()=>notes=!notes)),
+        _tool(Icons.auto_awesome,'Akıllı not',false,fillSmartNotes),
         _tool(Icons.undo,'Geri al',false,undo),
-        _tool(Icons.lightbulb_outline,'İpucu',false,hint),
+        _tool(Icons.lightbulb_outline,'Açıklamalı ipucu',false,hint),
         _tool(Icons.delete_outline,'Sil',false,erase),
       ])),
       Padding(padding:const EdgeInsets.fromLTRB(8,4,8,12),child:Row(children:List.generate(9,(i)=>Expanded(child:Padding(
