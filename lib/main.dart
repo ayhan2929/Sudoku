@@ -122,8 +122,6 @@ class _ScenePainter extends CustomPainter {
       colors:[Color(0xFF050912),Color(0xFF172131),Color(0xFF28252A),Color(0xFF080C13)]).createShader(rect));
     final star=Paint()..color=const Color(0xFFFFD98A);
     for(int i=0;i<80;i++){ final x=(i*73.7)%s.width; final y=(i*37.3)%(s.height*.42); canvas.drawCircle(Offset(x,y), i%4==0?1.3:.7,star); }
-    final moon=Offset(s.width*.82,s.height*.12);
-    canvas.drawCircle(moon,25,Paint()..color=const Color(0xFFFFD98A).withOpacity(.8));
     void mountain(double base, Color color, double offset){
       final p=Path()..moveTo(0,base);
       for(int i=0;i<=6;i++){final x=i*s.width/6; p.lineTo(x+s.width/12,base-s.height*(.09+((i*17+offset.toInt())%5)*.018)); p.lineTo(x+s.width/6,base);}
