@@ -468,8 +468,34 @@ class _GameScreenState extends State<GameScreen> {
     ]))));
   }
   Widget _metric(String a,String b)=>Column(children:[Text(a,style:const TextStyle(color:muted,fontSize:9)),Text(b,style:const TextStyle(color:brightGold,fontSize:17,fontWeight:FontWeight.bold))]);
-  Widget _tool(IconData icon,String label,bool active,VoidCallback tap)=>Expanded(child:InkWell(onTap:tap,child:Column(children:[
-    Icon(icon,color:active?brightGold:gold),Text(label,style:const TextStyle(color:muted,fontSize:10))])));
+  Widget _tool(IconData icon,String label,bool active,VoidCallback tap)=>Expanded(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      child: Material(
+        color: active ? const Color(0xFF594725) : panel,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: tap,
+          child: SizedBox(
+            height: 58,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon,color:active?brightGold:gold,size:24),
+                const SizedBox(height:3),
+                Text(label,style: TextStyle(
+                  color:active?brightGold:muted,
+                  fontSize:10,
+                  fontWeight:active?FontWeight.bold:FontWeight.normal,
+                )),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class SuccessScreen extends StatelessWidget {
