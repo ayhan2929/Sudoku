@@ -181,7 +181,7 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   late List<List<int>> board, givens, solution;
   int? row, col;
-  bool notes=false, loading=true, paused=false;
+  bool notes=false, loading=true, paused=false, finishing=false;
   int mistakes=0, hints=0, seconds=0;
   final Map<String,Set<int>> pencil={};
   final List<Map<String,dynamic>> history=[];
@@ -294,13 +294,26 @@ class _GameScreenState extends State<GameScreen> {
   }
   bool get complete=>List.generate(9,(r)=>List.generate(9,(c)=>board[r][c]==solution[r][c]).every((v)=>v)).every((v)=>v);
   Future<void> enter(int n) async {
-    if(row==null||col==null||fixed(row!,col!))return;
+    if(row==null||col==null){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Önce tahtadan boş bir hücre seç.')));
+      return;
+    }
     final r=row!,c=col!;
+    if(fixed(r,c)){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bu hücre sabit. Başka bir hücre seç.')));
+      return;
+    }
     setState((){
-      if(notes){final k='$r,$c';pencil.putIfAbsent(k,()=>{});if(pencil[k]!.contains(n)){pencil[k]!.remove(n);}else{pencil[k]!.add(n);}}
-      else{
-        history.add({'r':r,'c':c,'old':board[r][c],'mistakes':mistakes,'pencil':(pencil['$r,$c']??{}).toList()});
-        board[r][c]=n;pencil.remove('$r,$c');
+      final key='$r,$c';
+      if(notes){
+        final before=(pencil[key]??<int>{}).toList();
+        history.add({'r':r,'c':c,'old':board[r][c],'mistakes':mistakes,'pencil':before});
+        pencil.putIfAbsent(key,()=>{});
+        if(pencil[key]!.contains(n)){pencil[key]!.remove(n);}else{pencil[key]!.add(n);}
+        if(pencil[key]!.isEmpty)pencil.remove(key);
+      } else {
+        history.add({'r':r,'c':c,'old':board[r][c],'mistakes':mistakes,'pencil':(pencil[key]??{}).toList()});
+        board[r][c]=n;pencil.remove(key);
         if(n!=solution[r][c])mistakes++;
       }
     });
@@ -337,16 +350,21 @@ class _GameScreenState extends State<GameScreen> {
     await _save();if(complete)await _finish();
   }
   Future<void> _finish() async {
+    if(finishing)return;
+    finishing=true;
     final prefs=await SharedPreferences.getInstance();
     final stats=jsonDecode(prefs.getString(_statsKey)??'{}') as Map<String,dynamic>;
-    stats['played']=(stats['played']??0)+1;stats['solved']=(stats['solved']??0)+1;
-    stats['seconds']=(stats['seconds']??0)+seconds;
-    stats['byLevel'] ??= <String,int>{};
-    final by=Map<String,dynamic>.from(stats['byLevel'] as Map);by[widget.level]=(by[widget.level]??0)+1;stats['byLevel']=by;
+    final today=_today();
+    final solvedDates=(stats['dailySolvedDates'] as List? ?? []).cast<String>().toSet();
+    final alreadyCounted=widget.daily && solvedDates.contains(today);
+    if(!alreadyCounted){
+      stats['played']=(stats['played']??0)+1;stats['solved']=(stats['solved']??0)+1;
+      stats['seconds']=(stats['seconds']??0)+seconds;
+      stats['byLevel'] ??= <String,int>{};
+      final by=Map<String,dynamic>.from(stats['byLevel'] as Map);by[widget.level]=(by[widget.level]??0)+1;stats['byLevel']=by;
+    }
     if(widget.daily){
-      final today=_today();
       final last=stats['lastDailyDate'] as String?;
-      final solvedDates=(stats['dailySolvedDates'] as List? ?? []).cast<String>().toSet();
       if(!solvedDates.contains(today)){
         final yesterday=DateTime.now().subtract(const Duration(days:1));
         final y='${yesterday.year}-${yesterday.month}-${yesterday.day}';
@@ -538,6 +556,7 @@ class _DailyScreenState extends State<DailyScreen>{
   }
   @override Widget build(BuildContext context){
     final now=DateTime.now();
+    final alreadySolved=solved.contains(_date(now));
     return PageShell(title:'GÜNLÜK SUDOKU',child:loading
       ?const Center(child:CircularProgressIndicator(color:gold))
       :ListView(padding:const EdgeInsets.all(20),children:[
@@ -549,9 +568,9 @@ class _DailyScreenState extends State<DailyScreen>{
           const SizedBox(width:10),Expanded(child:StatCard(label:'EN UZUN SERİ',value:'$best gün',icon:Icons.emoji_events)),
         ]),
         const SizedBox(height:20),
-        GoldButton(label:solved.contains(_date(now))?'BUGÜN TAMAMLANDI':'BUGÜNÜN BULMACASINI OYNA',
-          icon:solved.contains(_date(now))?Icons.check_circle:Icons.play_arrow,
-          onTap:()=>go(context,const GameScreen(daily:true,level:'Orta'))),
+        GoldButton(label:alreadySolved?'BUGÜN TAMAMLANDI':'BUGÜNÜN BULMACASINI OYNA',
+          icon:alreadySolved?Icons.check_circle:Icons.play_arrow,
+          onTap:alreadySolved?()=>ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Bugünün bulmacasını zaten tamamladın. Yarın yeni bulmaca seni bekliyor!'))):()=>go(context,const GameScreen(daily:true,level:'Orta'))),
         const SizedBox(height:24),const Text('AYLIK İLERLEME',style:TextStyle(color:brightGold,fontWeight:FontWeight.bold,letterSpacing:1)),
         const SizedBox(height:10),CalendarCard(month:now,solved:solved),
       ]));
