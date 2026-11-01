@@ -50,7 +50,7 @@ class HomeScreen extends StatelessWidget {
             subtitle: 'Oyun deneyimini kişiselleştir.', onTap: () => go(context, const SettingsScreen())),
           const Spacer(),
           const SizedBox(height: 26),
-          const Text('Ayhan Kayaoğlu', style: TextStyle(color: brightGold, fontSize: 13,
+          const Text('Ayhan Kayaoğlu Tarafından Geliştirildi', style: TextStyle(color: brightGold, fontSize: 13,
             fontStyle: FontStyle.italic, letterSpacing: 1, shadows: [Shadow(color: gold, blurRadius: 8)])),
         ]),
       ),
@@ -150,7 +150,7 @@ class PageShell extends StatelessWidget {
       const SizedBox(width:48),
     ])),
     Expanded(child:child),
-  ])))));
+  ]))));
 }
 
 class DifficultyScreen extends StatelessWidget {
@@ -420,7 +420,7 @@ class _GameScreenState extends State<GameScreen> {
         padding:const EdgeInsets.symmetric(horizontal:2),child:Material(color:panel,borderRadius:BorderRadius.circular(8),
           child:InkWell(onTap:()=>enter(i+1),child:Container(height:47,alignment:Alignment.center,
             child:Text('${i+1}',style:const TextStyle(color:brightGold,fontSize:19,fontWeight:FontWeight.bold)))))))))),
-      const Padding(padding:EdgeInsets.only(bottom:5),child:Text('Ayhan Kayaoğlu',style:TextStyle(color:brightGold,fontSize:10,fontStyle:FontStyle.italic))),
+      const Padding(padding:EdgeInsets.only(bottom:5),child:Text('Ayhan Kayaoğlu Tarafından Geliştirildi',style:TextStyle(color:brightGold,fontSize:10,fontStyle:FontStyle.italic))),
     ]))));
   }
   Widget _metric(String a,String b)=>Column(children:[Text(a,style:const TextStyle(color:muted,fontSize:9)),Text(b,style:const TextStyle(color:brightGold,fontSize:17,fontWeight:FontWeight.bold))]);
@@ -443,7 +443,7 @@ class SuccessScreen extends StatelessWidget {
       const SizedBox(height:10),StatCard(label:'ZORLUK',value:level,icon:Icons.grid_4x4),
       const SizedBox(height:25),GoldButton(label:'YENİ OYUN',icon:Icons.play_arrow,onTap:()=>Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>const DifficultyScreen()))),
       TextButton(onPressed:()=>Navigator.popUntil(context,(r)=>r.isFirst),child:const Text('ANA SAYFAYA DÖN',style:TextStyle(color:gold))),
-    ])))));
+    ]))));
 }
 
 class DailyScreen extends StatefulWidget {
