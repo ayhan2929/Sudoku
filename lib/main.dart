@@ -559,7 +559,7 @@ class _StatsScreenState extends State<StatsScreen>{
           child:Row(children:[Expanded(child:Text(n,style:const TextStyle(color:white))),Text('${by[n]??0} tamamlandı',style:const TextStyle(color:muted))]))),
         const SizedBox(height:12),
         Text('Günlük Sudoku serisi: ${data['dailyStreak']??0} gün',style:const TextStyle(color:muted)),
-      ]);
+      ]));
   }
 }
 class StatCard extends StatelessWidget {
@@ -652,4 +652,3 @@ class InfoDialog extends StatelessWidget {
   const InfoDialog({super.key});
   @override Widget build(BuildContext context)=>AlertDialog(backgroundColor:panel,title:const Text('Sudoku'),content:const Text('Ayhan Kayaoğlu tarafından geliştirilmektedir.',style:TextStyle(color:white)),actions:[TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Kapat'))]);
 }
-
